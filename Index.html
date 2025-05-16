@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scholarship Laptop Spinning Wheel</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #c6d9ff, #e8f0fe);
+    margin: 0; padding: 0;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh;
+    color: #222;
+    user-select: none;
+  }
+  header {
+    background: linear-gradient(90deg, #003d99, #3366ff);
+    color: white;
+    width: 100%;
+    padding: 1.8rem 1rem;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,61,153,0.7);
+    font-weight: 700;
+    font-size: 2rem;
+    letter-spacing: 1.2px;
+    text-shadow: 0 0 8px rgba(255,255,255,0.6);
+  }
+  #wheelCanvas {
+    margin-top: 30px;
+    max-width: 350px;
+    width: 90vw;
+    height: 350px;
+    border-radius: 50%;
+    box-shadow: 0 0 25px rgba(0,82,204,0.8);
+    background: radial-gradient(circle at center, #f0f8ff, #a3c2ff);
+  }
+  #spinBtn {
+    margin-top: 25px;
+    background: #0052cc;
+    color: white;
+    border: none;
+    padding: 14px 30px;
+    font-size: 1.1rem;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0,82,204,0.5);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  #spinBtn:hover:not(:disabled) {
+    background: #003d99;
+    box-shadow: 0 8px 28px rgba(0,61,153,0.7);
+  }
+  #spinBtn:disabled {
+    background: #a3bffa;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  #result {
+    margin-top: 30px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #004aad;
+    min-height: 2.2rem;
+    text-align: center;
+    text-shadow: 0 0 6px rgba(0,74,173,0.7);
+  }
+  #applyBtn {
+    margin-top: 20px;
+    display: none;
+    background: #28a745;
+    color: white;
+    padding: 12px 28px;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 6px 20px rgba(40,167,69,0.6);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  #applyBtn:hover {
+    background: #1e7e34;
+    box-shadow: 0 8px 28px rgba(30,126,52,0.8);
+  }
+  footer {
+    margin-top: auto;
+    padding: 1rem 1rem 2rem;
+    font-size: 0.9rem;
+    color: #666;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  International Students Scholarship
+</header>
+
+<canvas id="wheelCanvas" width="350" height="350"></canvas>
+<button id="spinBtn">Spin the Wheel</button>
+
+<div id="result"></div>
+<a id="applyBtn" href="http://127.0.0.1:8080" target="_blank" rel="noopener">Apply Now</a>
+
+<footer>
+  &copy; 2025 International Scholarship Program
+</footer>
+
+<script>
+  const canvas = document.getElementById('wheelCanvas');
+  const ctx = canvas.getContext('2d');
+  const spinBtn = document.getElementById('spinBtn');
+  const resultDiv = document.getElementById('result');
+  const applyBtn = document.getElementById('applyBtn');
+
+  const laptops = [
+    { name: "Dell XPS 13", url: "http://127.0.0.1:8080" },
+    { name: "MacBook Air", url: "http://127.0.0.1:8080" },
+    { name: "Lenovo ThinkPad", url: "http://127.0.0.1:8080" },
+    { name: "HP Spectre x360", url: "http://127.0.0.1:8080" },
+    { name: "Asus ZenBook", url: "http://127.0.0.1:8080" },
+    { name: "Acer Swift 3", url: "http://127.0.0.1:8080" },
+    { name: "Microsoft Surface", url: "http://127.0.0.1:8080" },
+    { name: "Razer Blade Stealth", url: "http://127.0.0.1:8080" }
+  ];
+
+  const colors = [
+    '#0052cc', '#1a75ff', '#3399ff', '#66b2ff',
+    '#339966', '#33cc33', '#66ff66', '#99ff99'
+  ];
+
+  const wheelRadius = canvas.width / 2;
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  let startAngle = 0;
+  let spinTimeout = null;
+  let spinAngleStart = 0;
+  let spinTime = 0;
+  let spinTimeTotal = 0;
+
+  function drawSegment(index, angleStart, angleSize, color, text) {
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.arc(centerX, centerY, wheelRadius - 5, angleStart, angleStart + angleSize);
+    ctx.fillStyle = color;
+    ctx.shadowColor = "rgba(255, 255, 255, 0.7)";
+    ctx.shadowBlur = 15;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Text
+    ctx.save();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px Arial';
+    ctx.translate(centerX, centerY);
+    ctx.rotate(angleStart + angleSize / 2);
+    ctx.textAlign = "right";
+    ctx.fillText(text, wheelRadius - 25, 7);
+    ctx.restore();
+  }
+
+  function drawWheel() {
+    const segmentAngle = (2 * Math.PI) / laptops.length;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < laptops.length; i++) {
+      drawSegment(i, startAngle + i * segmentAngle, segmentAngle, colors[i % colors.length], laptops[i].name);
+    }
+
+    // Center circle with glow
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 45, 0, 2 * Math.PI);
+    let grad = ctx.createRadialGradient(centerX, centerY, 5, centerX, centerY, 45);
+    grad.addColorStop(0, '#007bff');
+    grad.addColorStop(1, '#003d99');
+    ctx.fillStyle = grad;
+    ctx.shadowColor = "rgba(0, 123, 255, 0.8)";
+    ctx.shadowBlur = 25;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Pointer with glow
+    ctx.beginPath();
+    ctx.moveTo(centerX - 12, 12);
+    ctx.lineTo(centerX + 12, 12);
+    ctx.lineTo(centerX, 45);
+    ctx.closePath();
+    ctx.fillStyle = '#ff3b3b';
+    ctx.shadowColor = "rgba(255, 59, 59, 0.8)";
+    ctx.shadowBlur = 15;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  function spin() {
+    spinAngleStart = Math.random() * 10 + 10;
+    spinTime = 0;
+    spinTimeTotal = Math.random() * 3000 + 4000; // 4-7 seconds
+    rotateWheel();
+    spinBtn.disabled = true;
+    resultDiv.textContent = "";
+    applyBtn.style.display = 'none';
+  }
+
+  function rotateWheel() {
+    spinTime += 30;
+    if (spinTime >= spinTimeTotal) {
+      stopRotateWheel();
+      return;
+    }
+    let spinAngle = spinAngleStart * (1 - spinTime / spinTimeTotal);
+    startAngle += (spinAngle * Math.PI / 180);
+    drawWheel();
+    spinTimeout = setTimeout(rotateWheel, 30);
+  }
+
+  function stopRotateWheel() {
+    clearTimeout(spinTimeout);
+    // Normalize angle
+    startAngle = startAngle % (2 * Math.PI);
+
+    const degrees = startAngle * 180 / Math.PI + 90;
+    const segmentAngle = 360 / laptops.length;
+    const index = Math.floor((360 - (degrees % 360)) / segmentAngle);
+    const selectedLaptop = laptops[index];
+
+    resultDiv.textContent = `Congratulations! You won: ${selectedLaptop.name}`;
+    applyBtn.style.display = 'inline-block';
+    // Fixed URL for apply button
+    applyBtn.href = "http://127.0.0.1:8080";
+
+    spinBtn.disabled = false;
+  }
+
+  spinBtn.addEventListener('click', spin);
+
+  drawWheel();
+</script>
+
+</body>
+</html>
